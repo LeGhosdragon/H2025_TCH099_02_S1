@@ -1,5 +1,14 @@
 <?php
 
+
+    // Creation du PDO
+    $pdo = new PDO(
+        "mysql:host={$config['host']};dbname={$config['dbname']};charset=utf8",
+        $config['username'],
+        $config['password'],
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
+    );
+
     /**
      * Ce fichier contient des exemples d'utilisation du routeur fourni dans Routeur.php.
      * 
@@ -13,18 +22,8 @@
     // Instancier le routeur
     $router = new Routeur();
 
-    // Route GET statique vers la racine
-    $router->get('/', function() {
-        echo "Bienvenue à la page d'acceuil!";
-    });
-
-    // Route GET dynamique avec l'identifiant de l'utilisateur
-    $router->get('/user/{id}', function($id) {
-        echo "Identifiant : " . htmlspecialchars($id);
-    });
-
-    // Route POST pour créer un utilisateur
-    $router->post('/user', function() {
+        // Route POST pour créer un utilisateur
+    $router->post('/inscription', function() use ($pdo) {
 
         // Récupérer les données de la requête et valider
         $data = file_get_contents('php://input');
@@ -40,60 +39,60 @@
             return;
         }
 
-        // Traiter de la requête
-        if (isset($userData['nom'])) {
-            echo "Usager créé avec le nom : " . htmlspecialchars($userData['nom']);
+
+
+        // Validation de l'identifiant
+        if (isset($userData['identifiant'])) {
+            //Nettoie l'identifiant
+            $identifiant = htmlspecialchars($userData['identifiant']);
+
+            //S'assure que l'identifiant n'a pas déja été choisis
+            $validPasseUnique = $pdo->prepare("SELECT count(*) FROM Utilisateurs WHERE id_utilisateur = :identifiant");
+            $validPasseUnique->execute(['identifiant' => $identifiant]);
+
+            $res = $validPasseUnique->fetch();
+            if($res != 0){
+                echo "Il existe ". $res . " identifiant similaires";
+                return;
+            }
+
+            
+
         } else {
-            echo "Erreur: Il manque le nom.";
-        }
-
-    });
-
-    // Mise à jour de l'utilisateur par identifiant
-    $router->put('/user/{id}', function($id) {
-
-        // Récupérer les données de la requête et valider
-        $data = file_get_contents('php://input');
-        $userData = json_decode($data, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            echo "Erreur: Données JSON invalides.";
+            echo "Identifiant invalide";
             return;
         }
-        
-        if ($userData === null) {
-            echo "Erreur: Les données de l'usager sont invalides.";
+
+        //Validation du mot de passe
+        if(isset($userData['passe'])){
+            //Nettoie le mot de passe
+            $passe = htmlspecialchars($userData['passe']);  
+            
+            //valide le mot de passe (il doit y avoir entre 8 et 32 characteres, au moins une majuscule, au moins un chiffre )
+            if (!preg_match('/^.*(?=.{8,32})(?=.*[A-Z])(?=.*[a-z])(?=.*\d).*$/', $passe,$mdpValid)){
+                echo "Mot de passe invalide";
+                return;
+            }
+
+        }else{
+            echo "Mot de passe invalide";
             return;
         }
 
-        // Traiter de la requête
-        if (isset($userData['nom'])) {
-            echo "Usager " . htmlspecialchars($id) . " mis à jour avec le nom: " . htmlspecialchars($userData['nom']);
-        } else {
-            echo "Erreur: Il manque le nom.";
-        }
-    });
-
-    // Supprimer un utilisateur par identifiant
-    $router->delete('/user/{id}', function($id) {
-        echo "L'usager " . htmlspecialchars($id) . " fut supprimé.";
-    });
-
-    // Afficher tous les utilisateurs
-    $router->get('/users', function() {
         
-        // Données de test simulant une base de données
-        $users = [
-            ['id' => 1, 'nom' => 'Frédéric Gendron'],
-            ['id' => 2, 'nom' => 'Amina Bouhoum']
-        ];
-        
-        // Répondre avec les données en format JSON
-        header('Content-Type: application/json');
+        $mpdHash = password_hash($passe,PASSWORD_BCRYPT);
 
-        echo json_encode($users);
-    
+        $requeteInscription = $pdo->prepare("INSERT INTO Utilisateurs (id_utilisateurs, mot_de_passe) VALUES (:identifiant, :passe)");
+        $requeteInscription->execute([
+            'identifiant' => $identifiant,
+            'passe' => $mpdHash
+        ]);
+
+        $resInscription = $requeteInscription->fetch();
+
+
     });
+
 
     // Acheminer la requête
     $router->dispatch($_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);

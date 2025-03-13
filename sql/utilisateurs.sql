@@ -4,7 +4,7 @@ CREATE OR REPLACE TABLE Utilisateurs(
     PRIMARY KEY (id_utilisateur),
     #Les mots de passes doivent être stocké sous forme de mot de passe haché avec Bcrypt
     mot_de_passe VARCHAR(64) NOT NULL,
-    type_utilisateur ENUM('ADMIN','JOUEUR','BAN') NOT NULL   
+    type_utilisateur ENUM('ADMIN','JOUEUR','BAN') DEFAULT 'JOUEUR' NOT NULL   
 );
 
 #Utilisateurs de tests
