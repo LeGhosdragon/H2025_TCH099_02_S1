@@ -3,6 +3,7 @@ CREATE OR REPLACE TABLE Utilisateurs(
     id_utilisateur VARCHAR(32) NOT NULL,
     PRIMARY KEY (id_utilisateur),
     #Les mots de passes doivent être stocké sous forme de mot de passe haché avec Bcrypt
+    #Il n'y a pas de contrainte dans le fichier sql, les contraintes sont dans la base de donnes
     mot_de_passe VARCHAR(64) NOT NULL,
     type_utilisateur ENUM('ADMIN','JOUEUR','BAN') DEFAULT 'JOUEUR' NOT NULL   
 );
