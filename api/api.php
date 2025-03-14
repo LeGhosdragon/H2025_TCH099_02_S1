@@ -1,5 +1,5 @@
 <?php
-
+    $config = require_once '../config.php';
 
     // Creation du PDO
     $pdo = new PDO(
@@ -23,10 +23,10 @@
     $router = new Routeur();
 
         // Route POST pour créer un utilisateur
-    $router->post('/inscription', function() use ($pdo) {
+    $router->post('/api.php/inscription', function() use ($pdo) {
 
         // Récupérer les données de la requête et valider
-        $data = file_get_contents('php://input');
+       /* $data = file_get_contents('php://input');
         $userData = json_decode($data, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
@@ -37,35 +37,32 @@
         if ($userData === null) {
             echo "Erreur: Les données de l'usager sont invalides.";
             return;
-        }
+        }*/
 
 
         // Validation de l'identifiant
-        if (isset($userData['identifiant'])) {
+        if (isset($_GET['identifiant'])) {
             //Nettoie l'identifiant
-            $identifiant = htmlspecialchars($userData['identifiant']);
+            $identifiant = htmlspecialchars($_GET['identifiant']);
 
             //S'assure que l'identifiant n'a pas déja été choisis
             $validPasseUnique = $pdo->prepare("SELECT count(*) FROM Utilisateurs WHERE id_utilisateur = :identifiant");
             $validPasseUnique->execute(['identifiant' => $identifiant]);
 
             $res = $validPasseUnique->fetch();
-            if($res != 0){
-                echo json_encode(['reussite' => false, 'erreurs' => "ID_DUPLICATE"]);
+            if($res['count(*)'] != 0){
+                echo json_encode(['reussite' => false, 'erreurs' => "ID_DUPLICATE " . $res['count(*)']]);
                 return;
             }
-
-            
-
         } else {
             echo json_encode(['reussite' => false, 'erreurs' => "ID_UNSET"]);
             return;
         }
 
         //Validation du mot de passe
-        if(isset($userData['passe'])){
+        if(isset($_GET['passe'])){
             //Nettoie le mot de passe
-            $passe = htmlspecialchars($userData['passe']);  
+            $passe = htmlspecialchars($_GET['passe']);  
             
             //valide le mot de passe (il doit y avoir entre 8 et 32 characteres, au moins une majuscule, au moins un chiffre )
             if (!preg_match('/^.*(?=.{8,32})(?=.*[A-Z])(?=.*[a-z])(?=.*\d).*$/', $passe,$mdpValid)){
@@ -81,7 +78,7 @@
         
         $mpdHash = password_hash($passe,PASSWORD_BCRYPT);
 
-        $requeteInscription = $pdo->prepare("INSERT INTO Utilisateurs (id_utilisateurs, mot_de_passe) VALUES (:identifiant, :passe)");
+        $requeteInscription = $pdo->prepare("INSERT INTO Utilisateurs (id_utilisateur, mot_de_passe) VALUES (:identifiant, :passe)");
         $requeteInscription->execute([
             'identifiant' => $identifiant,
             'passe' => $mpdHash
