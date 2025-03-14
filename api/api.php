@@ -40,7 +40,6 @@
         }
 
 
-
         // Validation de l'identifiant
         if (isset($userData['identifiant'])) {
             //Nettoie l'identifiant
@@ -52,14 +51,14 @@
 
             $res = $validPasseUnique->fetch();
             if($res != 0){
-                echo "Il existe ". $res . " identifiant similaires";
+                echo json_encode(['reussite' => false, 'erreurs' => "ID_DUPLICATE"]);
                 return;
             }
 
             
 
         } else {
-            echo "Identifiant invalide";
+            echo json_encode(['reussite' => false, 'erreurs' => "ID_UNSET"]);
             return;
         }
 
@@ -70,12 +69,12 @@
             
             //valide le mot de passe (il doit y avoir entre 8 et 32 characteres, au moins une majuscule, au moins un chiffre )
             if (!preg_match('/^.*(?=.{8,32})(?=.*[A-Z])(?=.*[a-z])(?=.*\d).*$/', $passe,$mdpValid)){
-                echo "Mot de passe invalide";
+                echo json_encode(['reussite' => false, 'erreurs' => "PASSE_INVALIDE"]);
                 return;
             }
 
         }else{
-            echo "Mot de passe invalide";
+            echo json_encode(['reussite' => false, 'erreurs' => "PASSE_UNSET"]);
             return;
         }
 
@@ -89,8 +88,8 @@
         ]);
 
         $resInscription = $requeteInscription->fetch();
-
-
+        echo json_encode(['reussite' => true]);
+        return;
     });
 
 
