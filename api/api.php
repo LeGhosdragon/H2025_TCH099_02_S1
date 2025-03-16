@@ -164,6 +164,11 @@ $router->post('/api.php/connexion', function () use ($pdo) {
 // Route POST pour connecter un utilisateur
 /**
  * @param string 'jeton' jeton de l'utilisateur qui desire ajouter un palmares
+ * @param int 'score' score qui a ete obtenu a la fin de la partie
+ * @param int 'duree' duree de la partie en ms
+ * @param int 'experience' quantitee dexperience aquise
+ * @param int 'ennemis' nombre d'ennemis elimine
+ * 
  * @return bool 'reussite' true si l'ajout est valide, false sinon
  * @return string 'erreurs' liste d'erreurs, vide si l'ajout est reussi
  */
@@ -177,24 +182,62 @@ $router->post('/api.php/palmares/ajouter', function () use ($pdo){
     $jeton = htmlspecialchars($_POST['jeton']);
 
     //Requete pour obtenir l'identifiant
-    $obtenirUtilisateur = $pdo->prepare("SELECT id_utilisateur FROM Jetons WHERE jeton = :jeton AND date_expiration < NOW()");
+    $obtenirUtilisateur = $pdo->prepare("SELECT j.id_utilisateur, s.score FROM Jetons j LEFT JOIN Scores s ON s.id_utilisateur = j.id_utilisateur WHERE j.data_jeton = :jeton AND j.date_expiration >= NOW()");
 
     $obtenirUtilisateur-> execute([
         'jeton' => $jeton
     ]);
 
     //Obtiens le id de l'utilisateur
-    $idUtil = $obtenirUtilisateur->fetch(PDO::FETCH_COLUMN);
+    ['id_utilisateur' => $idUtil, 'score'=>$ancientScore] = $obtenirUtilisateur->fetch()??[];
+
+
 
     //Verifie si l'utilisateur existe pour le jeton 
     if(!$idUtil){
         echo json_encode(['reussite' => false, 'erreurs' => JETON_INVALIDE]);
         return;
     }
+    //Fin de l'authentification
 
 
+    //Recupere les elements du sccore et les mets a 0 si ils sont null
+    $score = htmlspecialchars($_POST['score']??0);
+    $duree = htmlspecialchars($_POST['duree']??0);
+    $experience = htmlspecialchars($_POST['experience']??0);
+    $ennemis = htmlspecialchars($_POST['ennemis']??0);
 
+    //Verifie si le score nes pas null
+    if($score == 0){
+        echo json_encode(['reussite' => false, 'erreurs' => SCORE_NULL]);
+        return;
+    }
+    //Valide si le score concorde avec les statistiques
+    if($score != $ennemis * $duree * $experience ){
+        echo json_encode(['reussite' => false, 'erreurs' => SCORE_INVALIDE]);
+        return;
+    }
 
+    //Verifie si le nouveau score est meilleur que le precedent
+    if(!$ancientScore || $ancientScore < $score ){
+        $req = $pdo->prepare("
+        INSERT INTO Scores(id_utilisateur, score, temps_partie, experience, ennemis_enleve) VALUES (:id_utilisateur,:score,:temps,:experience,:ennemis)
+        ON DUPLICATE KEY UPDATE score = :score,
+        temps_partie = :temps,
+        experience = :experience,
+        ennemis_enleve = :ennemis,
+        date_soumission = NOW()");
+        $req->execute([
+            "id_utilisateur" => $idUtil,
+            "score" => $score,
+            "temps" => $duree,
+            "experience" => $experience,
+            "ennemis" => $ennemis
+        ]);
+        echo json_encode(['reussite' => true]);
+        return;
+    }
+    echo json_encode(['reussite' => false,'erreurs'=> SCORE_BAS]);
 
 });
 

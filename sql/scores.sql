@@ -11,5 +11,6 @@ CREATE OR REPLACE TABLE Scores(
 
     date_soumission DATETIME NOT NULL DEFAULT NOW(),
 
-    FOREIGN KEY (id_utilisateur) REFERENCES Utilisateurs(id)
+    FOREIGN KEY (id_utilisateur) REFERENCES Utilisateurs(id),
+    UNIQUE (id_utilisateur)
 );

@@ -16,3 +16,8 @@ define("PASSE_INVALIDE","Le mot de passe est incorect");
 
 define("JETON_UNSET","Pas de jeton de connexion");
 define("JETON_INVALIDE","Jeton invalide");
+
+define("SCORE_NULL","Le score nest pas set");
+define("SCORE_INVALIDE","Les elements du score ne sont pas valide");
+define("SCORE_BAS","Score plus bas que le precedent");
+
