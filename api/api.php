@@ -161,7 +161,46 @@ $router->post('/api.php/connexion', function () use ($pdo) {
     
     echo json_encode(['reussite' => true,'jeton'=> $jeton]);
 });
+// Route POST pour connecter un utilisateur
+/**
+ * @param string 'jeton' jeton de l'utilisateur qui desire ajouter un palmares
+ * @return bool 'reussite' true si l'ajout est valide, false sinon
+ * @return string 'erreurs' liste d'erreurs, vide si l'ajout est reussi
+ */
+$router->post('/api.php/palmares/ajouter', function () use ($pdo){
+    //Valide si le jeton est set
+    if (!isset($_POST['jeton'])) {
+        echo json_encode(['reussite' => false, 'erreurs' => JETON_UNSET]);
+        return;
+    }
+    //Lave le jeton
+    $jeton = htmlspecialchars($_POST['jeton']);
+
+    //Requete pour obtenir l'identifiant
+    $obtenirUtilisateur = $pdo->prepare("SELECT id_utilisateur FROM Jetons WHERE jeton = :jeton AND date_expiration < NOW()");
+
+    $obtenirUtilisateur-> execute([
+        'jeton' => $jeton
+    ]);
+
+    //Obtiens le id de l'utilisateur
+    $idUtil = $obtenirUtilisateur->fetch(PDO::FETCH_COLUMN);
+
+    //Verifie si l'utilisateur existe pour le jeton 
+    if(!$idUtil){
+        echo json_encode(['reussite' => false, 'erreurs' => JETON_INVALIDE]);
+        return;
+    }
+
+
+
+
+
+});
+
 $router->get('/api.php/palmares/obtenir', function () use ($pdo) {});
+
+
 
 // Acheminer la requête
 $router->dispatch($_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);

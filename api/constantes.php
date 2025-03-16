@@ -13,3 +13,6 @@ define("PASSE_NO_CHIFFRE","Le mot de passe ne contiens pas de chiffres");
 
 define("ID_INVALIDE","L'identifiant est invalide");
 define("PASSE_INVALIDE","Le mot de passe est incorect");
+
+define("JETON_UNSET","Pas de jeton de connexion");
+define("JETON_INVALIDE","Jeton invalide");
