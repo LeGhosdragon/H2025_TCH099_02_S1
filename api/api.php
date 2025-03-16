@@ -207,6 +207,26 @@ $router->post('/api.php/palmares/ajouter', function () use ($pdo){
     $experience = htmlspecialchars($_POST['experience']??0);
     $ennemis = htmlspecialchars($_POST['ennemis']??0);
 
+    if(!is_numeric($score)){
+        echo json_encode(['reussite' => false, 'erreurs' => SCORE_NO_INT]);
+        return;
+    }
+
+    if(!is_numeric($duree)){
+        echo json_encode(['reussite' => false, 'erreurs' => DUREE_NO_INT]);
+        return;
+    }
+    if(!is_numeric($experience)){
+        echo json_encode(['reussite' => false, 'erreurs' => EXPERIENCE_NO_INT]);
+        return;
+    }
+    if(!is_numeric($ennemis)){
+        echo json_encode(['reussite' => false, 'erreurs' => ENNEMIS_NO_INT]);
+        return;
+    }
+
+
+
     //Verifie si le score nes pas null
     if($score == 0){
         echo json_encode(['reussite' => false, 'erreurs' => SCORE_NULL]);

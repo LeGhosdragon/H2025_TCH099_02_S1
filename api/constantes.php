@@ -21,3 +21,7 @@ define("SCORE_NULL","Le score nest pas set");
 define("SCORE_INVALIDE","Les elements du score ne sont pas valide");
 define("SCORE_BAS","Score plus bas que le precedent");
 
+define("SCORE_NO_INT","Le score nest pas un int");
+define("DUREE_NO_INT","La duree nest pas un int");
+define("EXPERIENCE_NO_INT","L'experience nest pas un int");
+define("ENNEMIS_NO_INT","Le nombre d'ennemis nest pas un int");
