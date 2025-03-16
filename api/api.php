@@ -26,10 +26,11 @@ $router = new Routeur();
 
 // Route POST pour créer un utilisateur
 /**
+ * @param string 'identifiant' nom_utilisateur qui desire s'inscrire  
+ * @param string 'passe' mot de passe de l'utilisateur qui desire s'inscrire
  * 
- * 
- * 
- * 
+ * @return bool 'reussite' true si l'inscription est valide, false sinon
+ * @return string 'erreurs' liste d'erreurs, vide si l'inscription est reussie
  */
 $router->post('/api.php/inscription', function () use ($pdo) {
 
@@ -103,19 +104,34 @@ $router->post('/api.php/inscription', function () use ($pdo) {
     echo json_encode(['reussite' => true]);
 });
 
+
+// Route POST pour connecter un utilisateur
+/**
+ * @param string 'identifiant' nom_utilisateur qui desire se connecter  
+ * @param string 'passe' mot de passe de l'utilisateur qui desire se connecter
+ * 
+ * @return bool 'reussite' true si la connexion est valide, false sinon
+ * @return string 'erreurs' liste d'erreurs, vide si la connexion est reussie
+ * @return string 'jeton' jeton de la connexion, vide si la connexion est invalide
+ */
 $router->post('/api.php/connexion', function () use ($pdo) {
 
+    //Valide si l'identifiant est set
     if (!isset($_POST['identifiant'])) {
         echo json_encode(['reussite' => false, 'erreurs' => ID_ABSENT]);
         return;
     }
+    //Valide si le mot de passe est set
     if (!isset($_POST['passe'])) {
         echo json_encode(['reussite' => false, 'erreurs' => PASSE_UNSET]);
         return;
     }
-    $identifiant = $_POST['identifiant'];
-    $passe = $_POST['passe'];
 
+    //nettoie les identifiants
+    $identifiant = trim(htmlspecialchars($_POST['identifiant']));
+    $passe = htmlspecialchars($_POST['passe']);
+
+    //Genere la requete de connexion
     $reqConnexion = $pdo->prepare("SELECT mot_de_passe,id FROM Utilisateurs WHERE nom_utilisateur = :identifiant");
     $reqConnexion->execute([
         'identifiant' => $identifiant
@@ -123,6 +139,7 @@ $router->post('/api.php/connexion', function () use ($pdo) {
     ['mot_de_passe' => $mpdHash, "id" => $idUtil] = $reqConnexion->fetch() ?? [];
 
 
+    //Verifie les erreurs
     if (!$mpdHash) {
         echo json_encode(['reussite' => false, 'erreurs' => ID_INVALIDE]);
         return;
@@ -133,8 +150,10 @@ $router->post('/api.php/connexion', function () use ($pdo) {
         return;
     }
 
+    //Genere le jeton
     $jeton = bin2hex(random_bytes(32));
 
+    //Ajoute le jeton dans la base de donnes
     $ajoutJeton = $pdo->prepare("INSERT INTO Jetons (id_utilisateur,data_jeton) VALUES(?,?)");
 
     $ajoutJeton->execute([$idUtil, $jeton]);
