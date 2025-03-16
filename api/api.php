@@ -207,20 +207,20 @@ $router->post('/api.php/palmares/ajouter', function () use ($pdo){
     $experience = htmlspecialchars($_POST['experience']??0);
     $ennemis = htmlspecialchars($_POST['ennemis']??0);
 
-    if(!is_numeric($score)){
+    if(!filter_var($score,FILTER_VALIDATE_INT)){
         echo json_encode(['reussite' => false, 'erreurs' => SCORE_NO_INT]);
         return;
     }
 
-    if(!is_numeric($duree)){
+    if(!filter_var($duree,FILTER_VALIDATE_INT)){
         echo json_encode(['reussite' => false, 'erreurs' => DUREE_NO_INT]);
         return;
     }
-    if(!is_numeric($experience)){
+    if(!filter_var($experience,FILTER_VALIDATE_INT)){
         echo json_encode(['reussite' => false, 'erreurs' => EXPERIENCE_NO_INT]);
         return;
     }
-    if(!is_numeric($ennemis)){
+    if(!filter_var($ennemis,FILTER_VALIDATE_INT)){
         echo json_encode(['reussite' => false, 'erreurs' => ENNEMIS_NO_INT]);
         return;
     }
@@ -267,3 +267,5 @@ $router->get('/api.php/palmares/obtenir', function () use ($pdo) {});
 
 // Acheminer la requête
 $router->dispatch($_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);
+
+
