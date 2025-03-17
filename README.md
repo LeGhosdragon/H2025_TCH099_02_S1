@@ -6,6 +6,7 @@ Par:
 * Alexandre Gamache
 * Antoine Larocque
 * Brian Nguyen
+* Naya Wakim
 
 Ce dépôt contiens:
 * Les scripts nécessaire afin de générer les tables sql
