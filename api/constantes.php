@@ -13,3 +13,15 @@ define("PASSE_NO_CHIFFRE","Le mot de passe ne contiens pas de chiffres");
 
 define("ID_INVALIDE","L'identifiant est invalide");
 define("PASSE_INVALIDE","Le mot de passe est incorect");
+
+define("JETON_UNSET","Pas de jeton de connexion");
+define("JETON_INVALIDE","Jeton invalide");
+
+define("SCORE_NULL","Le score nest pas set");
+define("SCORE_INVALIDE","Les elements du score ne sont pas valide");
+define("SCORE_BAS","Score plus bas que le precedent");
+
+define("SCORE_NO_INT","Le score nest pas un int");
+define("DUREE_NO_INT","La duree nest pas un int");
+define("EXPERIENCE_NO_INT","L'experience nest pas un int");
+define("ENNEMIS_NO_INT","Le nombre d'ennemis nest pas un int");
