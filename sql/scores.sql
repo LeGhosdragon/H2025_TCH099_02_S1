@@ -14,3 +14,10 @@ CREATE OR REPLACE TABLE Scores(
     FOREIGN KEY (id_utilisateur) REFERENCES Utilisateurs(id),
     UNIQUE (id_utilisateur)
 );
+
+#Score de tests
+INSERT INTO Scores (id_utilisateur, score, temps_partie, experience, ennemis_enleve, date_soumission) 
+VALUES 
+    (1, 1500, 120000, 500, 30, '2025-03-18 14:25:00'),
+    (2, 2200, 90000, 700, 45, '2025-03-18 15:10:00'),
+    (3, 1850, 110000, 620, 38, '2025-03-18 16:30:00');

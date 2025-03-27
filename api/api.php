@@ -261,7 +261,132 @@ $router->post('/api.php/palmares/ajouter', function () use ($pdo){
 
 });
 
-$router->get('/api.php/palmares/obtenir', function () use ($pdo) {});
+// Route GET pour obtenir le palmares
+/**
+ * Cette route retourne les 20 meilleurs scores, classés par ordre décroissant.
+ * 
+ * @return bool 'reussite' true indiquant que la récupération des scores est réussie
+ * @return array 'palmares' tableau contenant les scores des utilisateurs avec leurs détails
+ *   - id: identifiant du score
+ *   - nom_utilisateur: nom de l'utilisateur ayant obtenu le score
+ *   - score: score total obtenu
+ *   - temps_partie: durée de la partie en ms
+ *   - experience: expérience acquise pendant la partie
+ *   - ennemis_enleve: nombre d'ennemis éliminés
+ *   - date_soumission: date de soumission du score
+ */
+$router->get('/api.php/palmares/obtenir', function () use ($pdo) {
+
+    $requetePalmares = 
+    $pdo -> query("SELECT score.id, utilisateur.nom_utilisateur, score.score, score.temps_partie,
+    score.experience, score.ennemis_enleve, score.date_soumission
+    FROM Scores score
+    JOIN Utilisateurs utilisateur ON score.id_utilisateur = utilisateur.id
+    ORDER BY score.score DESC
+    LIMIT 20");
+    
+    $palmares = $requetePalmares->fetchAll();
+
+    echo json_encode(['reussite' => true, 'palmares' => $palmares]);
+});
+
+// Route DELETE pour supprimer un score selon l'id
+/**
+ * Cette route permet à un administrateur de supprimer un score spécifique par son identifiant.
+ * 
+ * @param int {id} identifiant du score à supprimer (passé dans l'URL)
+ * @param string 'jeton' jeton d'authentification de l'administrateur
+ * 
+ * @return bool 'reussite' true si la suppression est réussie, false sinon
+ * @return string 'erreurs' message d'erreur si la suppression échoue
+ *   - JETON_UNSET: pas de jeton de connexion
+ *   - JETON_INVALIDE: jeton invalide
+ *   - Accès non autorisé: tentative de suppression par un non-administrateur
+ *   - ID de score invalide: identifiant de score incorrect
+ *   - Erreur lors de la suppression du score: problème technique
+ */
+$router->delete('/api.php/palmares/supprimer/{id}', function($id) use ($pdo){
+    if(!isset($_GET['jeton'])){
+        echo json_encode(['reussite' => false, 'erreurs' => JETON_UNSET]);
+        return;
+    }
+
+    $jeton = htmlspecialchars($_GET['jeton']);
+
+    $verifierAdmin = $pdo->prepare("
+        SELECT utilisateur.id, utilisateur.type_utilisateur
+        FROM Jetons jeton
+        JOIN Utilisateurs utilisateur ON jeton.id_utilisateur = utilisateur.id
+        WHERE jeton.data_jeton = :jeton AND jeton.date_expiration >= NOW()
+    ");
+
+    $verifierAdmin->execute(['jeton'=> $jeton]);
+    $utilisateur = $verifierAdmin->fetch();
+    if(!$utilisateur){
+        echo json_encode(['reussite' => false, 'erreurs' => JETON_INVALIDE]);
+        return;
+    }
+
+    if($utilisateur['type_utilisateur'] !== 'ADMIN'){
+        echo json_encode(['reussite' => false, 'erreurs' => 'Accès non autorisé']);
+        return;
+    }
+
+    if (!filter_var($id, FILTER_VALIDATE_INT)) {
+        echo json_encode(['reussite' => false, 'erreurs' => 'ID de score invalide']);
+        return;
+    }
+
+    $supprimerScore = $pdo->prepare("DELETE FROM Scores WHERE id = :id");
+    $resultat = $supprimerScore->execute(['id' => $id]);
+    
+    if ($resultat) {
+        echo json_encode(['reussite' => true]);
+    } else {
+        echo json_encode(['reussite' => false, 'erreurs' => 'Erreur lors de la suppression du score']);
+    }
+});
+
+// Route GET pour determiner si l'utilisateur est un admin
+/**
+ * Cette route vérifie si l'utilisateur connecté dispose de privilèges d'administrateur.
+ * 
+ * @param string 'jeton' jeton d'authentification de l'utilisateur
+ * 
+ * @return bool 'reussite' true indiquant que la vérification a été effectuée
+ * @return bool 'estAdmin' true si l'utilisateur est un administrateur, false sinon
+ * @return string 'erreurs' message d'erreur si la vérification échoue
+ *   - JETON_UNSET: aucun jeton de connexion
+ *   - JETON_INVALIDE: jeton invalide
+ */
+$router->get('/api.php/utilisateur/estAdmin', function () use ($pdo) {
+    if (!isset($_GET['jeton'])) {
+        echo json_encode(['reussite' => false, 'erreurs' => JETON_UNSET]);
+        return;
+    }
+    
+    $jeton = htmlspecialchars($_GET['jeton']);
+    
+    $verifierAdmin = $pdo->prepare("
+        SELECT utilisateur.type_utilisateur 
+        FROM Jetons jeton
+        JOIN Utilisateurs utilisateur ON jeton.id_utilisateur = utilisateur.id 
+        WHERE jeton.data_jeton = :jeton AND jeton.date_expiration >= NOW()
+    ");
+    
+    $verifierAdmin->execute(['jeton' => $jeton]);
+    $utilisateur = $verifierAdmin->fetch();
+    
+    if (!$utilisateur) {
+        echo json_encode(['reussite' => false, 'erreurs' => JETON_INVALIDE]);
+        return;
+    }
+    
+    echo json_encode([
+        'reussite' => true, 
+        'estAdmin' => ($utilisateur['type_utilisateur'] === 'ADMIN')
+    ]);
+});
 
 
 
