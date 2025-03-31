@@ -41,7 +41,7 @@ $router->post('/api.php/inscription', function () use ($pdo) {
 
         //Valide que l'identifiant nest pas vide
         if ($identifiant === '') {
-            echo json_encode(['reussite' => false, 'erreurs' => ID_ABSENT]);
+            echo json_encode(['reussite' => false, 'erreurs' => [ID_ABSENT]]);
             return;
         }
 
@@ -52,11 +52,11 @@ $router->post('/api.php/inscription', function () use ($pdo) {
 
         $res = $validPasseUnique->fetch();
         if ($res['count(*)'] != 0) {
-            echo json_encode(['reussite' => false, 'erreurs' => ID_DOUBLE]);
+            echo json_encode(['reussite' => false, 'erreurs' => [ID_DOUBLE]]);
             return;
         }
     } else {
-        echo json_encode(['reussite' => false, 'erreurs' => ID_UNSET]);
+        echo json_encode(['reussite' => false, 'erreurs' => [ID_UNSET]]);
         return;
     }
 
