@@ -10,6 +10,8 @@ CREATE OR REPLACE TABLE Utilisateurs(
     type_utilisateur ENUM('ADMIN','JOUEUR','BAN') DEFAULT 'JOUEUR' NOT NULL   
 );
 
+ALTER TABLE Utilisateurs ADD COLUMN date_inscription DATETIME NOT NULL DEFAULT NOW();
+
 #Utilisateurs de tests
 
 # utilisateur de test 1 : Garfield/JimDavis1945 -> $2y$10$rATwoKxPSI3B2NQuGHDeue14TRMZjB0R4XoMU6DlFER8qmLaLmKyG
