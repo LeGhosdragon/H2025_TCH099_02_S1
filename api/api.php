@@ -233,7 +233,7 @@ $router->post('/api.php/palmares/ajouter', function () use ($pdo){
         return;
     }
     //Valide si le score concorde avec les statistiques
-    if($score != $ennemis * $duree * $experience ){
+    if( intval($score) != intval($ennemis) * intval($duree) * intval($experience)){
         echo json_encode(['reussite' => false, 'erreurs' => SCORE_INVALIDE]);
         return;
     }
