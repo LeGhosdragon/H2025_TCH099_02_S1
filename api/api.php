@@ -101,7 +101,20 @@ $router->post('/api.php/inscription', function () use ($pdo) {
         'passe' => $mpdHash
     ]);
 
-    echo json_encode(['reussite' => true]);
+    /**Modification du jeton */
+
+    // Récupère l'ID du nouvel utilisateur
+    $userId = $pdo->lastInsertId();
+
+    // Génère un jeton 
+    $jeton = bin2hex(random_bytes(32));
+
+    // Ajoute le jeton dans la base de données
+    $ajoutJeton = $pdo->prepare("INSERT INTO Jetons (id_utilisateur, data_jeton) VALUES(?, ?)");
+    $ajoutJeton->execute([$userId, $jeton]);
+
+    // echo json_encode(['reussite' => true]);
+    echo json_encode(['reussite' => true, 'jeton' => $jeton]);
 });
 
 
@@ -161,6 +174,7 @@ $router->post('/api.php/connexion', function () use ($pdo) {
     
     echo json_encode(['reussite' => true,'jeton'=> $jeton]);
 });
+
 // Route POST pour connecter un utilisateur
 /**
  * @param string 'jeton' jeton de l'utilisateur qui desire ajouter un palmares
