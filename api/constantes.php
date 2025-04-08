@@ -25,3 +25,6 @@ define("SCORE_NO_INT","Le score nest pas un int");
 define("DUREE_NO_INT","La duree nest pas un int");
 define("EXPERIENCE_NO_INT","L'experience nest pas un int");
 define("ENNEMIS_NO_INT","Le nombre d'ennemis nest pas un int");
+
+define("ERREUR_ENREGISTREMENT_FEEDBACK", "Erreur lors de l\'enregistrement du feedback");
+define("ADMIN_FEEDBACK_ERREUR", "Les administrateurs ne peuvent pas soumettre de feedback");
