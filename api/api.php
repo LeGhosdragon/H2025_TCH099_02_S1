@@ -118,12 +118,12 @@ $router->post('/api.php/connexion', function () use ($pdo) {
 
     //Valide si l'identifiant est set
     if (!isset($_POST['identifiant'])) {
-        echo json_encode(['reussite' => false, 'erreurs' => ID_ABSENT]);
+        echo json_encode(['reussite' => false, 'erreurs' => [ID_ABSENT]]);
         return;
     }
     //Valide si le mot de passe est set
     if (!isset($_POST['passe'])) {
-        echo json_encode(['reussite' => false, 'erreurs' => PASSE_UNSET]);
+        echo json_encode(['reussite' => false, 'erreurs' => [PASSE_UNSET]]);
         return;
     }
 
@@ -141,12 +141,12 @@ $router->post('/api.php/connexion', function () use ($pdo) {
 
     //Verifie les erreurs
     if (!$mpdHash) {
-        echo json_encode(['reussite' => false, 'erreurs' => ID_INVALIDE]);
+        echo json_encode(['reussite' => false, 'erreurs' => [ID_INVALIDE]]);
         return;
     }
 
     if (!password_verify($passe, $mpdHash)) {
-        echo json_encode(['reussite' => false, 'erreurs' => PASSE_INVALIDE]);
+        echo json_encode(['reussite' => false, 'erreurs' => [PASSE_INVALIDE]]);
         return;
     }
 
