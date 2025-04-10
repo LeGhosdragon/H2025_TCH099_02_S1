@@ -175,11 +175,10 @@ $router->post('/api.php/connexion', function () use ($pdo) {
     echo json_encode(['reussite' => true,'jeton'=> $jeton]);
 });
 
-// Route POST pour connecter un utilisateur
 /**
  * @param string 'jeton' jeton de l'utilisateur qui desire ajouter un palmares
  * @param int 'score' score qui a ete obtenu a la fin de la partie
- * @param int 'duree' duree de la partie en ms
+ * @param int 'duree' duree de la partie en secondes
  * @param int 'experience' quantitee dexperience aquise
  * @param int 'ennemis' nombre d'ennemis elimine
  * 
@@ -284,7 +283,7 @@ $router->post('/api.php/palmares/ajouter', function () use ($pdo){
  *   - id: identifiant du score
  *   - nom_utilisateur: nom de l'utilisateur ayant obtenu le score
  *   - score: score total obtenu
- *   - temps_partie: durée de la partie en ms
+ *   - temps_partie: durée de la partie en secondes
  *   - experience: expérience acquise pendant la partie
  *   - ennemis_enleve: nombre d'ennemis éliminés
  *   - date_soumission: date de soumission du score
