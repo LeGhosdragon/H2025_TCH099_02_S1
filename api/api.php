@@ -94,6 +94,10 @@ $router->post('/api.php/inscription', function () use ($pdo) {
 
     $mpdHash = password_hash($passe, PASSWORD_BCRYPT);
 
+    //Genere le jeton
+    $jeton = bin2hex(random_bytes(32));
+
+
     //Requete d'inscription a la base de donnees
     $requeteInscription = $pdo->prepare("INSERT INTO Utilisateurs (nom_utilisateur, mot_de_passe) VALUES (:identifiant, :passe)");
     $requeteInscription->execute([
@@ -101,7 +105,11 @@ $router->post('/api.php/inscription', function () use ($pdo) {
         'passe' => $mpdHash
     ]);
 
-    echo json_encode(['reussite' => true]);
+    $idUtil = $pdo->lastInsertId();
+    $ajoutJeton = $pdo->prepare("INSERT INTO Jetons (id_utilisateur,data_jeton) VALUES(:id_utilisateur, :jeton)");
+    $ajoutJeton->execute(['id_utilisateur' => $idUtil, 'jeton' => $jeton]);
+
+    echo json_encode(['reussite' => true,'jeton'=> $jeton]);
 });
 
 
@@ -559,6 +567,172 @@ $router->get('/api.php/utilisateur/profil', function () use ($pdo) {
     ];
     
     echo json_encode($response);
+});
+
+// Route POST pour télécharger une photo de profil
+/**
+ * Cette route permet à un utilisateur connecté de télécharger une photo de profil.
+ * 
+ * @param string 'jeton' jeton d'authentification de l'utilisateur
+ * @param file 'image' fichier image à télécharger
+ * 
+ * @return bool 'reussite' true si le téléchargement est réussi, false sinon
+ * @return string 'erreurs' message d'erreur si le téléchargement échoue
+ *   - JETON_UNSET: pas de jeton de connexion
+ *   - JETON_INVALIDE: jeton invalide
+ *   - IMAGE_NON_FOURNIE: aucune image n'a été fournie
+ *   - TYPE_IMAGE_INVALIDE: format d'image non supporté
+ *   - TAILLE_IMAGE_EXCESSIVE: image trop volumineuse
+ *   - ERREUR_UPLOAD: problème technique lors du téléchargement
+ */
+$router->post('/api.php/utilisateur/profile-picture/upload', function () use ($pdo) {
+    if (!isset($_POST['jeton'])) {
+        echo json_encode(['reussite' => false, 'erreurs' => 'JETON_UNSET']);
+        return;
+    }
+    
+    $jeton = htmlspecialchars($_POST['jeton']);
+    
+    $verifierUtilisateur = $pdo->prepare("
+        SELECT utilisateur.id, utilisateur.nom_utilisateur
+        FROM Jetons jeton
+        JOIN Utilisateurs utilisateur ON jeton.id_utilisateur = utilisateur.id
+        WHERE jeton.data_jeton = :jeton AND jeton.date_expiration >= NOW()
+    ");
+    
+    $verifierUtilisateur->execute(['jeton' => $jeton]);
+    $utilisateur = $verifierUtilisateur->fetch();
+    
+    if (!$utilisateur) {
+        echo json_encode(['reussite' => false, 'erreurs' => 'JETON_INVALIDE']);
+        return;
+    }
+    
+    if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+        echo json_encode(['reussite' => false, 'erreurs' => 'IMAGE_NON_FOURNIE']);
+        return;
+    }
+    
+    $image = $_FILES['image'];
+    
+    // Vérification du type de fichier 
+    $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime_type = finfo_file($finfo, $image['tmp_name']);
+    finfo_close($finfo);
+    
+    // Vérification du type d'image
+    if (!in_array($mime_type, $allowed_types)) {
+        echo json_encode(['reussite' => false, 'erreurs' => 'TYPE_IMAGE_INVALIDE']);
+        return;
+    }
+    
+    // Vérification de la taille (max 2MB)
+    if ($image['size'] > 2 * 1024 * 1024) {
+        echo json_encode(['reussite' => false, 'erreurs' => 'TAILLE_IMAGE_EXCESSIVE']);
+        return;
+    }
+    
+    // Lire le contenu de l'image
+    $imageData = file_get_contents($image['tmp_name']);
+    
+    // Vérifier si l'utilisateur a déjà une photo de profil
+    $checkExistingPhoto = $pdo->prepare("
+        SELECT id FROM PhotosProfil WHERE id_utilisateur = :id_utilisateur
+    ");
+    $checkExistingPhoto->execute(['id_utilisateur' => $utilisateur['id']]);
+    $existingPhoto = $checkExistingPhoto->fetch();
+    
+    // Mettre à jour ou insérer la nouvelle photo dans la base de données
+    if ($existingPhoto) {
+        $updatePhoto = $pdo->prepare("
+            UPDATE PhotosProfil 
+            SET image_data = :image_data, mime_type = :mime_type, date_modification = NOW() 
+            WHERE id_utilisateur = :id_utilisateur
+        ");
+        $success = $updatePhoto->execute([
+            'image_data' => $imageData,
+            'mime_type' => $mime_type,
+            'id_utilisateur' => $utilisateur['id']
+        ]);
+    } else {
+        $insertPhoto = $pdo->prepare("
+            INSERT INTO PhotosProfil (id_utilisateur, image_data, mime_type, date_creation)
+            VALUES (:id_utilisateur, :image_data, :mime_type, NOW())
+        ");
+        $success = $insertPhoto->execute([
+            'id_utilisateur' => $utilisateur['id'],
+            'image_data' => $imageData,
+            'mime_type' => $mime_type
+        ]);
+    }
+    
+    if ($success) {
+        echo json_encode([
+            'reussite' => true,
+            'message' => 'Photo de profil mise à jour avec succès'
+        ]);
+    } else {
+        echo json_encode(['reussite' => false, 'erreurs' => 'ERREUR_ENREGISTREMENT_BDD']);
+    }
+});
+
+// Route GET pour récupérer la photo de profil
+/**
+ * Cette route permet de récupérer l'URL de la photo de profil d'un utilisateur.
+ * 
+ * @param string 'jeton' jeton d'authentification de l'utilisateur
+ * 
+ * @return bool 'reussite' true si la récupération est réussie, false sinon
+ * @return string 'erreurs' message d'erreur si la récupération échoue
+ * @return string 'photo_url' URL de la photo de profil, ou null si aucune photo
+ */
+$router->get('/api.php/utilisateur/profile-picture', function () use ($pdo) {
+    if (!isset($_GET['jeton'])) {
+        echo json_encode(['reussite' => false, 'erreurs' => 'JETON_UNSET']);
+        return;
+    }
+    
+    $jeton = htmlspecialchars($_GET['jeton']);
+    
+    $verifierUtilisateur = $pdo->prepare("
+        SELECT utilisateur.id
+        FROM Jetons jeton
+        JOIN Utilisateurs utilisateur ON jeton.id_utilisateur = utilisateur.id
+        WHERE jeton.data_jeton = :jeton AND jeton.date_expiration >= NOW()
+    ");
+    
+    $verifierUtilisateur->execute(['jeton' => $jeton]);
+    $utilisateur = $verifierUtilisateur->fetch();
+    
+    if (!$utilisateur) {
+        echo json_encode(['reussite' => false, 'erreurs' => 'JETON_INVALIDE']);
+        return;
+    }
+    
+    $reqPhoto = $pdo->prepare("
+        SELECT image_data, mime_type
+        FROM PhotosProfil
+        WHERE id_utilisateur = :id_utilisateur
+    ");
+    
+    $reqPhoto->execute(['id_utilisateur' => $utilisateur['id']]);
+    $photo = $reqPhoto->fetch();
+    
+    if ($photo && $photo['image_data']) {
+        $base64Image = base64_encode($photo['image_data']);
+        $dataUri = 'data:' . $photo['mime_type'] . ';base64,' . $base64Image;
+        
+        echo json_encode([
+            'reussite' => true,
+            'photo_data' => $dataUri
+        ]);
+    } else {
+        echo json_encode([
+            'reussite' => true,
+            'photo_data' => null
+        ]);
+    }
 });
 
 // Acheminer la requête
