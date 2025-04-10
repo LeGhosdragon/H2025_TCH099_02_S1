@@ -105,11 +105,20 @@ $router->post('/api.php/inscription', function () use ($pdo) {
         'passe' => $mpdHash
     ]);
 
-    $idUtil = $pdo->lastInsertId();
-    $ajoutJeton = $pdo->prepare("INSERT INTO Jetons (id_utilisateur,data_jeton) VALUES(:id_utilisateur, :jeton)");
-    $ajoutJeton->execute(['id_utilisateur' => $idUtil, 'jeton' => $jeton]);
+    /**Modification du jeton */
 
-    echo json_encode(['reussite' => true,'jeton'=> $jeton]);
+    // Récupère l'ID du nouvel utilisateur
+    $userId = $pdo->lastInsertId();
+
+    // Génère un jeton 
+    $jeton = bin2hex(random_bytes(32));
+
+    // Ajoute le jeton dans la base de données
+    $ajoutJeton = $pdo->prepare("INSERT INTO Jetons (id_utilisateur, data_jeton) VALUES(?, ?)");
+    $ajoutJeton->execute([$userId, $jeton]);
+
+    // echo json_encode(['reussite' => true]);
+    echo json_encode(['reussite' => true, 'jeton' => $jeton]);
 });
 
 
@@ -126,12 +135,12 @@ $router->post('/api.php/connexion', function () use ($pdo) {
 
     //Valide si l'identifiant est set
     if (!isset($_POST['identifiant'])) {
-        echo json_encode(['reussite' => false, 'erreurs' => ID_ABSENT]);
+        echo json_encode(['reussite' => false, 'erreurs' => [ID_ABSENT]]);
         return;
     }
     //Valide si le mot de passe est set
     if (!isset($_POST['passe'])) {
-        echo json_encode(['reussite' => false, 'erreurs' => PASSE_UNSET]);
+        echo json_encode(['reussite' => false, 'erreurs' => [PASSE_UNSET]]);
         return;
     }
 
@@ -149,12 +158,12 @@ $router->post('/api.php/connexion', function () use ($pdo) {
 
     //Verifie les erreurs
     if (!$mpdHash) {
-        echo json_encode(['reussite' => false, 'erreurs' => ID_INVALIDE]);
+        echo json_encode(['reussite' => false, 'erreurs' => [ID_INVALIDE]]);
         return;
     }
 
     if (!password_verify($passe, $mpdHash)) {
-        echo json_encode(['reussite' => false, 'erreurs' => PASSE_INVALIDE]);
+        echo json_encode(['reussite' => false, 'erreurs' => [PASSE_INVALIDE]]);
         return;
     }
 
@@ -169,11 +178,11 @@ $router->post('/api.php/connexion', function () use ($pdo) {
     
     echo json_encode(['reussite' => true,'jeton'=> $jeton]);
 });
-// Route POST pour connecter un utilisateur
+
 /**
  * @param string 'jeton' jeton de l'utilisateur qui desire ajouter un palmares
  * @param int 'score' score qui a ete obtenu a la fin de la partie
- * @param int 'duree' duree de la partie en ms
+ * @param int 'duree' duree de la partie en secondes
  * @param int 'experience' quantitee dexperience aquise
  * @param int 'ennemis' nombre d'ennemis elimine
  * 
@@ -278,7 +287,7 @@ $router->post('/api.php/palmares/ajouter', function () use ($pdo){
  *   - id: identifiant du score
  *   - nom_utilisateur: nom de l'utilisateur ayant obtenu le score
  *   - score: score total obtenu
- *   - temps_partie: durée de la partie en ms
+ *   - temps_partie: durée de la partie en secondes
  *   - experience: expérience acquise pendant la partie
  *   - ennemis_enleve: nombre d'ennemis éliminés
  *   - date_soumission: date de soumission du score
