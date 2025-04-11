@@ -220,20 +220,20 @@ $router->post('/api.php/palmares/ajouter', function () use ($pdo){
     $experience = htmlspecialchars($_POST['experience']??0);
     $ennemis = htmlspecialchars($_POST['ennemis']??0);
 
-    if(!filter_var($score,FILTER_VALIDATE_INT)){
+    if(!is_numeric($score)){
         echo json_encode(['reussite' => false, 'erreurs' => SCORE_NO_INT]);
         return;
     }
 
-    if(!filter_var($duree,FILTER_VALIDATE_INT)){
+    if(!is_numeric($duree)){
         echo json_encode(['reussite' => false, 'erreurs' => DUREE_NO_INT]);
         return;
     }
-    if(!filter_var($experience,FILTER_VALIDATE_INT)){
+    if(!is_numeric($experience)){
         echo json_encode(['reussite' => false, 'erreurs' => EXPERIENCE_NO_INT]);
         return;
     }
-    if(!filter_var($ennemis,FILTER_VALIDATE_INT)){
+    if(!is_numeric($ennemis)){
         echo json_encode(['reussite' => false, 'erreurs' => ENNEMIS_NO_INT]);
         return;
     }
@@ -262,10 +262,10 @@ $router->post('/api.php/palmares/ajouter', function () use ($pdo){
         date_soumission = NOW()");
         $req->execute([
             "id_utilisateur" => $idUtil,
-            "score" => $score,
-            "temps" => $duree,
-            "experience" => $experience,
-            "ennemis" => $ennemis
+            "score" => intval($score),
+            "temps" => intval($duree),
+            "experience" => intval($experience),
+            "ennemis" => intval($ennemis)
         ]);
         echo json_encode(['reussite' => true]);
         return;
