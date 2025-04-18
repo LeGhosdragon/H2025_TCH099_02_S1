@@ -499,6 +499,79 @@ $router->post('/api.php/feedback/soumettre', function () use ($pdo) {
     }
 });
 
+// Route GET pour récupérer les feedbacks (accès admin uniquement)
+/**
+ * @param string 'jeton' jeton d'authentification de l'administrateur (GET)
+ * @param string 'categorie' (optionnel) catégorie de feedback à filtrer
+ *
+ * @return bool   'reussite' true si la récupération est réussie, false sinon
+ * @return array  'feedbacks' liste des feedbacks récupérés
+ * @return string 'erreurs' message d'erreur si la récupération échoue
+ */
+$router->get('/api.php/feedback/liste', function () use ($pdo) {
+    // 1) Vérification du jeton
+    if (!isset($_GET['jeton'])) {
+        echo json_encode(['reussite' => false, 'erreurs' => 'JETON_UNSET']);
+        return;
+    }
+    $jeton = htmlspecialchars($_GET['jeton']);
+
+    // 2) Vérification de l’utilisateur et de son rôle
+    $verifierAdmin = $pdo->prepare("
+        SELECT u.id, u.type_utilisateur
+        FROM Jetons j
+        JOIN Utilisateurs u ON j.id_utilisateur = u.id
+        WHERE j.data_jeton = :jeton
+          AND j.date_expiration >= NOW()
+    ");
+    $verifierAdmin->execute(['jeton' => $jeton]);
+    $utilisateur = $verifierAdmin->fetch();
+
+    if (!$utilisateur) {
+        echo json_encode(['reussite' => false, 'erreurs' => 'JETON_INVALIDE']);
+        return;
+    }
+    if ($utilisateur['type_utilisateur'] !== 'ADMIN') {
+        echo json_encode(['reussite' => false, 'erreurs' => 'ACCES_REFUSE']);
+        return;
+    }
+
+    // 3) Construction de la requête
+    $query  = "
+        SELECT
+          f.id,
+          f.contenu,
+          f.note,
+          f.categorie,
+          f.date_soumission AS date_creation,
+          u.nom_utilisateur
+        FROM Feedbacks f
+        JOIN Utilisateurs u ON f.id_utilisateur = u.id
+    ";
+    $params = [];
+
+    // Filtrage optionnel par catégorie
+    if (isset($_GET['categorie']) && $_GET['categorie'] !== '') {
+        $categorie        = htmlspecialchars($_GET['categorie']);
+        $query           .= " WHERE f.categorie = :categorie";
+        $params['categorie'] = $categorie;
+    }
+
+    // Tri du plus récent au plus ancien
+    $query .= " ORDER BY f.date_soumission DESC";
+
+    // 4) Exécution et retour JSON
+    $stmt = $pdo->prepare($query);
+    $stmt->execute($params);
+    $feedbacks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    echo json_encode([
+        'reussite'  => true,
+        'feedbacks' => $feedbacks
+    ]);
+});
+
+
 // Route GET pour obtenir les informations d'un utilisateur
 /**
  * Cette route permet de récupérer les informations d'un utilisateur connecté et ses scores.
