@@ -249,12 +249,34 @@ $router->post('/api.php/palmares/ajouter', function () use ($pdo){
         echo json_encode(['reussite' => false, 'erreurs' => SCORE_NULL]);
         return;
     }
+    $res = calculateLevelFromExp(intval($experience));
+
     //Valide si le score concorde avec les statistiques
-    if( intval($score) != intval($ennemis) * intval($duree) * intval($experience)){
+    if( intval($score) != intval($ennemis) * 100 + intval($duree) * 250 + $res['level'] * 10000){
         echo json_encode(['reussite' => false, 'erreurs' => SCORE_INVALIDE]);
         return;
     }
-
+    //Transforme le score en nombre de niveau
+    function calculateLevelFromExp($expTotal) {
+        $level = 0;
+    
+        while (true) {
+            $expReq = 7 + round(pow($level, 1.9));
+    
+            if ($expTotal >= $expReq) {
+                $expTotal -= $expReq;
+                $level++;
+            } else {
+                break;
+            }
+        }
+    
+        return [
+            'level' => $level,
+            'remainingExp' => $expTotal,
+            'nextExpReq' => 7 + round(pow($level, 1.9))
+        ];
+    }
     //Verifie si le nouveau score est meilleur que le precedent
     if(!$ancientScore || $ancientScore < $score ){
         $req = $pdo->prepare("
