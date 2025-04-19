@@ -24,6 +24,29 @@ require_once 'Routeur.php';
 // Instancier le routeur
 $router = new Routeur();
 
+//Cette fonction permet de calculer le niveau du joueur selon son niveau d'expérience total dans le jeu.
+function calculateLevelFromExp($expTotal) {
+    $level = 0;
+
+    while (true) {
+        $expReq = 7 + round(pow($level, 1.9));
+
+        if ($expTotal >= $expReq) {
+            $expTotal -= $expReq;
+            $level++;
+        } else {
+            break;
+        }
+    }
+
+    return [
+        'level' => $level,
+        'remainingExp' => $expTotal,
+        'nextExpReq' => 7 + round(pow($level, 1.9))
+    ];
+}
+
+
 // Route POST pour créer un utilisateur
 /**
  * @param string 'identifiant' nom_utilisateur qui desire s'inscrire  
@@ -256,27 +279,7 @@ $router->post('/api.php/palmares/ajouter', function () use ($pdo){
         echo json_encode(['reussite' => false, 'erreurs' => SCORE_INVALIDE]);
         return;
     }
-    //Transforme le score en nombre de niveau
-    function calculateLevelFromExp($expTotal) {
-        $level = 0;
     
-        while (true) {
-            $expReq = 7 + round(pow($level, 1.9));
-    
-            if ($expTotal >= $expReq) {
-                $expTotal -= $expReq;
-                $level++;
-            } else {
-                break;
-            }
-        }
-    
-        return [
-            'level' => $level,
-            'remainingExp' => $expTotal,
-            'nextExpReq' => 7 + round(pow($level, 1.9))
-        ];
-    }
     //Verifie si le nouveau score est meilleur que le precedent
     if(!$ancientScore || $ancientScore < $score ){
         $req = $pdo->prepare("
@@ -531,14 +534,14 @@ $router->post('/api.php/feedback/soumettre', function () use ($pdo) {
  * @return string 'erreurs' message d'erreur si la récupération échoue
  */
 $router->get('/api.php/feedback/liste', function () use ($pdo) {
-    // 1) Vérification du jeton
+    //Vérification du jeton
     if (!isset($_GET['jeton'])) {
         echo json_encode(['reussite' => false, 'erreurs' => 'JETON_UNSET']);
         return;
     }
     $jeton = htmlspecialchars($_GET['jeton']);
 
-    // 2) Vérification de l’utilisateur et de son rôle
+    //Vérification de l’utilisateur et de son rôle
     $verifierAdmin = $pdo->prepare("
         SELECT u.id, u.type_utilisateur
         FROM Jetons j
@@ -558,7 +561,7 @@ $router->get('/api.php/feedback/liste', function () use ($pdo) {
         return;
     }
 
-    // 3) Construction de la requête
+    //Construction de la requête
     $query  = "
         SELECT
           f.id,
