@@ -24,7 +24,9 @@ require_once 'Routeur.php';
 // Instancier le routeur
 $router = new Routeur();
 
-//Cette fonction permet de calculer le niveau du joueur selon son niveau d'expérience total dans le jeu.
+/** Cette fonction permet de calculer le niveau du joueur selon son expérience total.
+ * @param int 'expTotal' le nombre total d'expérience du joueur
+ */ 
 function calculateLevelFromExp($expTotal) {
     $level = 0;
 
@@ -46,9 +48,7 @@ function calculateLevelFromExp($expTotal) {
     ];
 }
 
-
-// Route POST pour créer un utilisateur
-/**
+/** Route POST pour créer un utilisateur
  * @param string 'identifiant' nom_utilisateur qui desire s'inscrire  
  * @param string 'passe' mot de passe de l'utilisateur qui desire s'inscrire
  * 
@@ -136,17 +136,18 @@ $router->post('/api.php/inscription', function () use ($pdo) {
     // Génère un jeton 
     $jeton = bin2hex(random_bytes(32));
 
+    //Jeton de refresh
+    $refresh_token = bin2hex(random_bytes(64));
+
     // Ajoute le jeton dans la base de données
-    $ajoutJeton = $pdo->prepare("INSERT INTO Jetons (id_utilisateur, data_jeton) VALUES(?, ?)");
-    $ajoutJeton->execute([$userId, $jeton]);
+    $ajoutJeton = $pdo->prepare("INSERT INTO Jetons (id_utilisateur, data_jeton, refresh_token) VALUES(?, ?, ?)");
+    $ajoutJeton->execute([$userId, $jeton, $refresh_token]);
 
     // echo json_encode(['reussite' => true]);
-    echo json_encode(['reussite' => true, 'jeton' => $jeton]);
+    echo json_encode(['reussite' => true, 'jeton' => $jeton, 'refresh_token' => $refresh_token]);
 });
 
-
-// Route POST pour connecter un utilisateur
-/**
+/** Route POST pour connecter un utilisateur
  * @param string 'identifiant' nom_utilisateur qui desire se connecter  
  * @param string 'passe' mot de passe de l'utilisateur qui desire se connecter
  * 
@@ -193,16 +194,56 @@ $router->post('/api.php/connexion', function () use ($pdo) {
     //Genere le jeton
     $jeton = bin2hex(random_bytes(32));
 
-    //Ajoute le jeton dans la base de donnes
-    $ajoutJeton = $pdo->prepare("INSERT INTO Jetons (id_utilisateur,data_jeton) VALUES(?,?)");
+    //Jeton de refresh
+    $refresh_token = bin2hex(random_bytes(64));
 
-    $ajoutJeton->execute([$idUtil, $jeton]);
+    //Ajoute le jeton dans la base de donnes
+    $ajoutJeton = $pdo->prepare("INSERT INTO Jetons (id_utilisateur, data_jeton, refresh_token) VALUES(?, ?, ?)");
+
+    $ajoutJeton->execute([$idUtil, $jeton, $refresh_token]);
 
     
-    echo json_encode(['reussite' => true,'jeton'=> $jeton]);
+    echo json_encode(['reussite' => true,'jeton'=> $jeton, 'refresh_token' => $refresh_token]);
 });
 
-/**
+/** Route POST pour rafraîchir le jeton d'accès
+ * @param string 'refresh_token' refresh token de la session
+ * 
+ * @return bool   'reussite' true si le rafraîchissement est réussi, false sinon
+ * @return string 'erreurs' message d'erreur en cas d'échec
+ * @return string 'jeton' nouveau jeton d'accès si le rafraîchissement réussit
+ */
+$router->post('/api.php/refresh-token', function () use ($pdo) {
+    // Recupere le refresh token
+    if (!isset($_POST['refresh_token'])) {
+        echo json_encode(['reussite' => false, 'erreur' => 'Refresh token manquant']);
+        return;
+    }
+    
+    $refreshToken = $_POST['refresh_token'];
+    
+    // On verifie si le refresh token existe et il n'a pas expirer
+    $stmt = $pdo->prepare("SELECT id_utilisateur FROM Jetons WHERE refresh_token = ? AND date_expiration_refresh > NOW()");
+    $stmt->execute([$refreshToken]);
+    $result = $stmt->fetch();
+    
+    if (!$result) {
+        echo json_encode(['reussite' => false, 'erreur' => 'Refresh token invalide ou expiré']);
+        return;
+    }
+    
+    // On genere un nouveau jeton d'acces.
+    $userId = $result['id_utilisateur'];
+    $nouveauJeton = bin2hex(random_bytes(32));
+    
+    // Mis a jour du jeton dans la base de donnees
+    $updateStmt = $pdo->prepare("UPDATE Jetons SET data_jeton = ?, date_expiration = DATE_ADD(NOW(), INTERVAL 1 HOUR) WHERE id_utilisateur = ? AND refresh_token = ?");
+    $updateStmt->execute([$nouveauJeton, $userId, $refreshToken]);
+    
+    echo json_encode(['reussite' => true, 'jeton' => $nouveauJeton]);
+});
+
+/** Route POST pour ajouter un score au palmarès
  * @param string 'jeton' jeton de l'utilisateur qui desire ajouter un palmares
  * @param int 'score' score qui a ete obtenu a la fin de la partie
  * @param int 'duree' duree de la partie en secondes
@@ -389,47 +430,6 @@ $router->delete('/api.php/palmares/supprimer/{id}', function($id) use ($pdo){
     }
 });
 
-// Route GET pour determiner si l'utilisateur est un admin
-/**
- * Cette route vérifie si l'utilisateur connecté dispose de privilèges d'administrateur.
- * 
- * @param string 'jeton' jeton d'authentification de l'utilisateur
- * 
- * @return bool 'reussite' true indiquant que la vérification a été effectuée
- * @return bool 'estAdmin' true si l'utilisateur est un administrateur, false sinon
- * @return string 'erreurs' message d'erreur si la vérification échoue
- *   - JETON_UNSET: aucun jeton de connexion
- *   - JETON_INVALIDE: jeton invalide
- */
-$router->get('/api.php/utilisateur/estAdmin', function () use ($pdo) {
-    if (!isset($_GET['jeton'])) {
-        echo json_encode(['reussite' => false, 'erreurs' => JETON_UNSET]);
-        return;
-    }
-    
-    $jeton = htmlspecialchars($_GET['jeton']);
-    
-    $verifierAdmin = $pdo->prepare("
-        SELECT utilisateur.type_utilisateur 
-        FROM Jetons jeton
-        JOIN Utilisateurs utilisateur ON jeton.id_utilisateur = utilisateur.id 
-        WHERE jeton.data_jeton = :jeton AND jeton.date_expiration >= NOW()
-    ");
-    
-    $verifierAdmin->execute(['jeton' => $jeton]);
-    $utilisateur = $verifierAdmin->fetch();
-    
-    if (!$utilisateur) {
-        echo json_encode(['reussite' => false, 'erreurs' => JETON_INVALIDE]);
-        return;
-    }
-    
-    echo json_encode([
-        'reussite' => true, 
-        'estAdmin' => ($utilisateur['type_utilisateur'] === 'ADMIN')
-    ]);
-});
-
 // Route POST pour soumettre un feedback
 /**
  * Cette route permet à un utilisateur connecté d'envoyer un feedback sur le jeu.
@@ -596,6 +596,46 @@ $router->get('/api.php/feedback/liste', function () use ($pdo) {
     ]);
 });
 
+// Route GET pour determiner si l'utilisateur est un admin
+/**
+ * Cette route vérifie si l'utilisateur connecté dispose de privilèges d'administrateur.
+ * 
+ * @param string 'jeton' jeton d'authentification de l'utilisateur
+ * 
+ * @return bool 'reussite' true indiquant que la vérification a été effectuée
+ * @return bool 'estAdmin' true si l'utilisateur est un administrateur, false sinon
+ * @return string 'erreurs' message d'erreur si la vérification échoue
+ *   - JETON_UNSET: aucun jeton de connexion
+ *   - JETON_INVALIDE: jeton invalide
+ */
+$router->get('/api.php/utilisateur/estAdmin', function () use ($pdo) {
+    if (!isset($_GET['jeton'])) {
+        echo json_encode(['reussite' => false, 'erreurs' => JETON_UNSET]);
+        return;
+    }
+    
+    $jeton = htmlspecialchars($_GET['jeton']);
+    
+    $verifierAdmin = $pdo->prepare("
+        SELECT utilisateur.type_utilisateur 
+        FROM Jetons jeton
+        JOIN Utilisateurs utilisateur ON jeton.id_utilisateur = utilisateur.id 
+        WHERE jeton.data_jeton = :jeton AND jeton.date_expiration >= NOW()
+    ");
+    
+    $verifierAdmin->execute(['jeton' => $jeton]);
+    $utilisateur = $verifierAdmin->fetch();
+    
+    if (!$utilisateur) {
+        echo json_encode(['reussite' => false, 'erreurs' => JETON_INVALIDE]);
+        return;
+    }
+    
+    echo json_encode([
+        'reussite' => true, 
+        'estAdmin' => ($utilisateur['type_utilisateur'] === 'ADMIN')
+    ]);
+});
 
 // Route GET pour obtenir les informations d'un utilisateur
 /**
