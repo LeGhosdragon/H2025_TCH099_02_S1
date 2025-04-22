@@ -276,6 +276,7 @@ $router->post('/api.php/palmares/ajouter', function () use ($pdo){
 
     //Verifie si l'utilisateur existe pour le jeton 
     if(!$idUtil){
+        http_response_code(401);  
         echo json_encode(['reussite' => false, 'erreurs' => JETON_INVALIDE]);
         return;
     }
@@ -406,6 +407,7 @@ $router->delete('/api.php/palmares/supprimer/{id}', function($id) use ($pdo){
     $verifierAdmin->execute(['jeton'=> $jeton]);
     $utilisateur = $verifierAdmin->fetch();
     if(!$utilisateur){
+        http_response_code(401);  
         echo json_encode(['reussite' => false, 'erreurs' => JETON_INVALIDE]);
         return;
     }
@@ -487,6 +489,7 @@ $router->post('/api.php/feedback/soumettre', function () use ($pdo) {
     $utilisateur = $verifierUtilisateur->fetch();
     
     if (!$utilisateur) {
+        http_response_code(401);  
         echo json_encode(['reussite' => false, 'erreurs' => JETON_INVALIDE]);
         return;
     }
@@ -553,6 +556,7 @@ $router->get('/api.php/feedback/liste', function () use ($pdo) {
     $utilisateur = $verifierAdmin->fetch();
 
     if (!$utilisateur) {
+        http_response_code(401);  
         echo json_encode(['reussite' => false, 'erreurs' => 'JETON_INVALIDE']);
         return;
     }
@@ -627,6 +631,7 @@ $router->get('/api.php/utilisateur/estAdmin', function () use ($pdo) {
     $utilisateur = $verifierAdmin->fetch();
     
     if (!$utilisateur) {
+        http_response_code(401);  
         echo json_encode(['reussite' => false, 'erreurs' => JETON_INVALIDE]);
         return;
     }
@@ -673,6 +678,7 @@ $router->get('/api.php/utilisateur/profil', function () use ($pdo) {
     $utilisateur = $reqUtilisateur->fetch();
     
     if (!$utilisateur) {
+        http_response_code(401);  
         echo json_encode(['reussite' => false, 'erreurs' => JETON_INVALIDE]);
         return;
     }
@@ -751,6 +757,7 @@ $router->post('/api.php/utilisateur/profile-picture/upload', function () use ($p
     $utilisateur = $verifierUtilisateur->fetch();
     
     if (!$utilisateur) {
+        http_response_code(401);  
         echo json_encode(['reussite' => false, 'erreurs' => 'JETON_INVALIDE']);
         return;
     }
@@ -853,6 +860,7 @@ $router->get('/api.php/utilisateur/profile-picture', function () use ($pdo) {
     $utilisateur = $verifierUtilisateur->fetch();
     
     if (!$utilisateur) {
+        http_response_code(401);  
         echo json_encode(['reussite' => false, 'erreurs' => 'JETON_INVALIDE']);
         return;
     }
