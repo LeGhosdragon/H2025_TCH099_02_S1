@@ -57,7 +57,7 @@ function calculateLevelFromExp($expTotal) {
  */
 $router->post('/api.php/inscription', function () use ($pdo) {
 
-    // Validation de l'identifiant
+    //Validation de l'identifiant
     if (isset($_POST['identifiant'])) {
         //Nettoie l'identifiant
         $identifiant = trim(htmlspecialchars($_POST['identifiant']));
@@ -67,7 +67,15 @@ $router->post('/api.php/inscription', function () use ($pdo) {
             echo json_encode(['reussite' => false, 'erreurs' => [ID_ABSENT]]);
             return;
         }
-
+        
+        //Valide que l'identifiant est entre 3 et 20 characteres et ne contient pas de caracteres speciaux
+        if (!preg_match('/^[A-Za-z0-9_]{3,20}$/', $identifiant)) {
+        echo json_encode([
+            'reussite' => false,
+            'erreurs' => [ID_USER_INV]
+        ]);
+        return;
+        }
 
         //S'assure que l'identifiant n'a pas déja été choisis
         $validPasseUnique = $pdo->prepare("SELECT count(*) FROM Utilisateurs WHERE nom_utilisateur = :identifiant");
@@ -117,10 +125,6 @@ $router->post('/api.php/inscription', function () use ($pdo) {
 
     $mpdHash = password_hash($passe, PASSWORD_BCRYPT);
 
-    //Genere le jeton
-    $jeton = bin2hex(random_bytes(32));
-
-
     //Requete d'inscription a la base de donnees
     $requeteInscription = $pdo->prepare("INSERT INTO Utilisateurs (nom_utilisateur, mot_de_passe) VALUES (:identifiant, :passe)");
     $requeteInscription->execute([
@@ -144,6 +148,7 @@ $router->post('/api.php/inscription', function () use ($pdo) {
     $ajoutJeton->execute([$userId, $jeton, $refresh_token]);
 
     // echo json_encode(['reussite' => true]);
+    header('Content-Type: application/json');
     echo json_encode(['reussite' => true, 'jeton' => $jeton, 'refresh_token' => $refresh_token]);
 });
 

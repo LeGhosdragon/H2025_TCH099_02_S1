@@ -4,6 +4,7 @@
 define("ID_ABSENT","Aucun identifiant n'a été trouvé");
 define("ID_DOUBLE","L'identifiant existe deja");
 define("ID_UNSET", "Aucun identifiant n'a ete envoye");
+define("ID_USER_INV","Nom d'utilisateur invalide: La longueur doit etre comprise entre 3 et 32 caracteres et ne doit pas contenir de caracteres speciaux");
 
 define("PASSE_UNSET","Aucun mot de passe n'a ete envoye");
 define("PASSE_TAILLE_INV","Longueur du mot de passe invalide: %d Longueur attendue entre 8 et 32");
